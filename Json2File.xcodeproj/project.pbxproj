@@ -466,6 +466,7 @@
 				6D34F546192394CB00934E8B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		6D34F547192394CB00934E8B /* Build configuration list for PBXNativeTarget "Json2FileTests" */ = {
 			isa = XCConfigurationList;
@@ -474,6 +475,7 @@
 				6D34F549192394CB00934E8B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
