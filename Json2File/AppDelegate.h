@@ -15,6 +15,7 @@
     
     NSMutableArray *_classHeaderArray;
     NSMutableArray *_classImpleArray;
+    NSString *_mainClassName;
 }
 
 @property (assign) IBOutlet NSWindow *window;

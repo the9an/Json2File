@@ -21,12 +21,14 @@
 - (IBAction)convertButtonClick:(id)sender
 {
     [_classHeaderArray removeAllObjects];
+    [_classImpleArray removeAllObjects];
+    _mainClassName = [self uppercaseFirstLetter:_fileName.stringValue];
     NSData *jsonData = [_jsonCodeTextView.string dataUsingEncoding:NSUTF8StringEncoding];
     NSError *error;
     NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
     if (error) return;
     
-    [self createClass:jsonDict withClassName:[self uppercaseFirstLetter:_fileName.stringValue]];
+    [self createClass:jsonDict withClassName:_mainClassName];
     
     [self saveHeaderFile];
     [self saveImplementFile];
@@ -54,8 +56,8 @@
         id obj = dictionary[key];
         if ([obj isKindOfClass:[NSDictionary class]]) {
             NSString *className = [NSString stringWithFormat:@"%@%@",
-                                   [self uppercaseFirstLetter:_fileName.stringValue],
-                                   [self uppercaseFirstLetter:key]];
+                                   _mainClassName,
+                                   [self formatName:key]];
             
             [self createClass:dictionary[key] withClassName:className];
             proString = [NSString stringWithFormat:@"\n@property (nonatomic, readonly) %@ *%@;", className, key];
@@ -63,8 +65,8 @@
         }
         else if ([obj isKindOfClass:[NSArray class]]) {
             NSString *className = [NSString stringWithFormat:@"%@%@",
-                                   [self uppercaseFirstLetter:_fileName.stringValue],
-                                   [self uppercaseFirstLetter:key]];
+                                   _mainClassName,
+                                   [self formatName:key]];
             
             NSArray *array = dictionary[key];
             [self createClass:[array objectAtIndex:0] withClassName:className];
@@ -81,10 +83,17 @@
         }
         else {
             id obj = dictionary[key];
-            NSString *type = NSStringFromClass([obj class]);
-            type = [type stringByReplacingOccurrencesOfString:@"__NSCF" withString:@"NS"];
-            proString = [NSString stringWithFormat:@"\n@property (nonatomic, readonly) %@ *%@;", type, key];
-            initString = [NSString stringWithFormat:@"\n\t\tself.%@ = data[@\"%@\"];",key,key];
+            NSString *type = @"";
+            if ([obj isKindOfClass:[NSString class]]) {
+                type = @"NSString";
+            }
+            else {
+                type = NSStringFromClass([obj superclass]);
+            }
+            //type = [type stringByReplacingOccurrencesOfString:@"__NSCF" withString:@"NS"];
+            NSString *validKey = ([key isEqualToString:@"id"]) ? @"Id" : key; //check if key = id
+            proString = [NSString stringWithFormat:@"\n@property (nonatomic, readonly) %@ *%@;", type, validKey];
+            initString = [NSString stringWithFormat:@"\n\t\tself.%@ = data[@\"%@\"];",validKey,key];
         }
         
         classHeaderContent = [NSString stringWithFormat:@"%@%@",classHeaderContent,proString];
@@ -109,7 +118,7 @@
 - (void)saveHeaderFile
 {
     //Header file
-    NSString *filepath = [NSString stringWithFormat:@"~/Desktop/%@.h",[self uppercaseFirstLetter:_fileName.stringValue]];
+    NSString *filepath = [NSString stringWithFormat:@"~/Desktop/%@.h",_mainClassName];
     filepath = [filepath stringByExpandingTildeInPath];
     NSString *content = @"\n\n\n"
                         "#import <Foundation/Foundation.h>";
@@ -126,11 +135,11 @@
 
 - (void)saveImplementFile
 {
-    NSString *filepath = [NSString stringWithFormat:@"~/Desktop/%@.m",[self uppercaseFirstLetter:_fileName.stringValue]];
+    NSString *filepath = [NSString stringWithFormat:@"~/Desktop/%@.m",_mainClassName];
     filepath = [filepath stringByExpandingTildeInPath];
     NSString *content = [NSString stringWithFormat:@"\n\n\n"
                                                     "#import \"%@.h\"",
-                                                    [self uppercaseFirstLetter:_fileName.stringValue]];
+                                                    _mainClassName];
     
     NSString *classContents = [_classImpleArray componentsJoinedByString:@""];
     
@@ -139,6 +148,17 @@
     [[NSFileManager defaultManager] createFileAtPath:filepath
                                             contents:fileContents
                                           attributes:nil];
+}
+
+- (NSString *)formatName:(NSString *)name
+{
+    NSString *formatedName = @"";
+    NSArray *array = [name componentsSeparatedByString:@"_"];
+    for (NSString *str in array) {
+        formatedName = [NSString stringWithFormat:@"%@%@", formatedName, [self uppercaseFirstLetter:str]];
+    }
+    
+    return formatedName;
 }
 
 - (NSString *)uppercaseFirstLetter:(NSString *)inputString
