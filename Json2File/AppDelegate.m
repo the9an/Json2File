@@ -16,13 +16,18 @@
     
     _classHeaderArray = [[NSMutableArray alloc] init];
     _classImpleArray = [[NSMutableArray alloc] init];
+    _mainClassName = @"FileName"; //default file name
+    NSString *home = [[[NSProcessInfo processInfo] environment] objectForKey:@"HOME"];
+    _directoryPath = [NSString stringWithFormat:@"%@/Desktop/", home]; //default folder path
+    _fileName.stringValue = [NSString stringWithFormat:@"%@%@",_directoryPath, _mainClassName];
+    _jsonCodeTextView.delegate = self;
+    _isEdited = NO;
 }
 
 - (IBAction)convertButtonClick:(id)sender
 {
     [_classHeaderArray removeAllObjects];
     [_classImpleArray removeAllObjects];
-    _mainClassName = [self uppercaseFirstLetter:_fileName.stringValue];
     NSData *jsonData = [_jsonCodeTextView.string dataUsingEncoding:NSUTF8StringEncoding];
     NSError *error;
     NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
@@ -32,6 +37,40 @@
     
     [self saveHeaderFile];
     [self saveImplementFile];
+    
+    [self showAlertWithDetailedInformation:@"Convert completed"];
+    [_convertButton setTitle:@"Converted"];
+    _isEdited = NO;
+    
+    [[NSWorkspace sharedWorkspace] openFile:_directoryPath];
+}
+
+- (IBAction)saveAsButtonClick:(id)sender; {
+    NSSavePanel *savePanelObj	= [NSSavePanel savePanel];
+    NSInteger buttonIdx	= [savePanelObj runModal];
+    if(buttonIdx == NSOKButton){
+    } else if(buttonIdx == NSCancelButton) {
+     	return;
+    } else {
+     	return;
+    }
+    
+    _directoryPath = [[[savePanelObj directoryURL] absoluteString] stringByReplacingOccurrencesOfString:@"file://" withString:@""];
+    NSLog(@"save as directory = %@",_directoryPath);
+    
+    _mainClassName = [self uppercaseFirstLetter:[savePanelObj nameFieldStringValue]];
+    NSLog(@"save as filename = %@",_mainClassName);
+    
+    _fileName.stringValue = [NSString stringWithFormat:@"%@%@",_directoryPath, _mainClassName];
+}
+
+#pragma mark - NSTextViewDelegate
+- (void)textViewDidChangeTypingAttributes:(NSNotification *)notification
+{
+    if (!_isEdited) {
+        _isEdited = YES;
+        [_convertButton setTitle:@"Convert >>"];
+    }
 }
 
 - (void)createClass:(NSDictionary *)dictionary withClassName:(NSString *)className
@@ -61,7 +100,7 @@
             
             [self createClass:dictionary[key] withClassName:className];
             proString = [NSString stringWithFormat:@"\n@property (nonatomic, readonly) %@ *%@;", className, key];
-            initString = [NSString stringWithFormat:@"\n\t\tself.%@ = [[%@ init] initWithData:data[@\"%@\"]];",key,className,key];
+            initString = [NSString stringWithFormat:@"\n\t\t_%@ = [[%@ alloc] initWithData:data[@\"%@\"]];",key,className,key];
         }
         else if ([obj isKindOfClass:[NSArray class]]) {
             NSString *className = [NSString stringWithFormat:@"%@%@",
@@ -73,10 +112,10 @@
             proString = [NSString stringWithFormat:@"\n@property (nonatomic, readonly) NSMutableArray *%@;", key];
             
             initString = [NSString stringWithFormat:
-                          @"\n\t\tself.%@ = [[NSMutableArray alloc] init];"
+                          @"\n\t\t_%@ = [[NSMutableArray alloc] init];"
                           "\n\t\tfor (NSDictionary *dictionary in data[@\"%@\"]) {"
                           "\n\t\t\t%@ *item = [[%@ alloc] initWithData:dictionary];"
-                          "\n\t\t\t[self.%@ addObject:item];"
+                          "\n\t\t\t[_%@ addObject:item];"
                           "\n\t\t}",
                           key, key, className, className, key];
             
@@ -93,7 +132,7 @@
             //type = [type stringByReplacingOccurrencesOfString:@"__NSCF" withString:@"NS"];
             NSString *validKey = ([key isEqualToString:@"id"]) ? @"Id" : key; //check if key = id
             proString = [NSString stringWithFormat:@"\n@property (nonatomic, readonly) %@ *%@;", type, validKey];
-            initString = [NSString stringWithFormat:@"\n\t\tself.%@ = data[@\"%@\"];",validKey,key];
+            initString = [NSString stringWithFormat:@"\n\t\t_%@ = data[@\"%@\"];",validKey,key];
         }
         
         classHeaderContent = [NSString stringWithFormat:@"%@%@",classHeaderContent,proString];
@@ -118,7 +157,7 @@
 - (void)saveHeaderFile
 {
     //Header file
-    NSString *filepath = [NSString stringWithFormat:@"~/Desktop/%@.h",_mainClassName];
+    NSString *filepath = [NSString stringWithFormat:@"%@%@.h",_directoryPath,_mainClassName];
     filepath = [filepath stringByExpandingTildeInPath];
     NSString *content = @"\n\n\n"
                         "#import <Foundation/Foundation.h>";
@@ -135,7 +174,7 @@
 
 - (void)saveImplementFile
 {
-    NSString *filepath = [NSString stringWithFormat:@"~/Desktop/%@.m",_mainClassName];
+    NSString *filepath = [NSString stringWithFormat:@"%@%@.m",_directoryPath,_mainClassName];
     filepath = [filepath stringByExpandingTildeInPath];
     NSString *content = [NSString stringWithFormat:@"\n\n\n"
                                                     "#import \"%@.h\"",
@@ -176,6 +215,23 @@
     }
     
     return capitalisedSentence;
+}
+
+-(void)showAlertWithDetailedInformation:(NSString *)detailedInformation
+{
+    NSTextView *accessory = [[NSTextView alloc] initWithFrame:NSMakeRect(0,0,200,50)];
+    NSFont *font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
+    NSDictionary *textAttributes = [NSDictionary dictionaryWithObject:font forKey:NSFontAttributeName];
+    [accessory insertText:[[NSAttributedString alloc] initWithString:detailedInformation
+                                                          attributes:textAttributes]];
+    [accessory setEditable:NO];
+    [accessory setDrawsBackground:YES];
+    [accessory setBackgroundColor:[NSColor clearColor]];
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:@""];
+    [alert setInformativeText:@""];
+    [alert setAccessoryView:accessory];
+    [alert runModal]; 
 }
 
 @end

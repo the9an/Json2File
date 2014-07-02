@@ -8,14 +8,17 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface AppDelegate : NSObject <NSApplicationDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSTextViewDelegate>
 {
     IBOutlet NSTextField *_fileName;
     IBOutlet NSTextView *_jsonCodeTextView;
+    IBOutlet NSButton *_convertButton;
     
     NSMutableArray *_classHeaderArray;
     NSMutableArray *_classImpleArray;
     NSString *_mainClassName;
+    NSString *_directoryPath;
+    BOOL _isEdited;
 }
 
 @property (assign) IBOutlet NSWindow *window;
